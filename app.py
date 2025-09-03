@@ -48,13 +48,13 @@ st.subheader("Disusun oleh")
 staff = st.text_input("Nama Staff Pembuat")
 manager = st.text_input("Nama Manager")
 
-# Fungsi buat PDF mirip template
+# Fungsi buat PDF mirip template final
 def generate_pdf(output_path, data, logo=None):
     doc = SimpleDocTemplate(output_path, pagesize=A4)
     elements = []
 
     styles = getSampleStyleSheet()
-    style_center = ParagraphStyle(name="Center", parent=styles["Heading1"], alignment=TA_CENTER, fontSize=18, spaceAfter=10)
+    style_center = ParagraphStyle(name="Center", alignment=TA_CENTER, fontSize=18, spaceAfter=10, leading=22)
     style_footer = ParagraphStyle(name="Footer", fontSize=10, alignment=TA_CENTER, italic=True)
 
     # Header
@@ -63,16 +63,19 @@ def generate_pdf(output_path, data, logo=None):
         img.hAlign = "LEFT"
         elements.append(img)
 
-    elements.append(Paragraph("Reason For Outage (RFO)", style_center))
-    elements.append(Spacer(1, 6))
+    elements.append(Paragraph("<b>Reason For Outage (RFO)</b>", style_center))
 
-    # Garis hitam tebal
-    elements.append(Spacer(1, 6))
+    # Garis hitam tebal di bawah header
+    elements.append(Spacer(1, 4))
+    line = Table([[""]], colWidths=[500])
+    line.setStyle(TableStyle([("LINEBELOW", (0, 0), (-1, -1), 2, colors.black)]))
+    elements.append(line)
+    elements.append(Spacer(1, 10))
 
-    # Buat tabel data
+    # Tabel data
     table_data = []
     for section, values in data.items():
-        # Section Title
+        # Judul Section
         table_data.append([Paragraph(f"<b>{section}</b>", styles["Normal"]), ""])
         for key, value in values.items():
             table_data.append([Paragraph(f"<b>{key}</b>", styles["Normal"]), f": {value}"])
@@ -89,12 +92,18 @@ def generate_pdf(output_path, data, logo=None):
     elements.append(table)
     elements.append(Spacer(1, 30))
 
+    # Garis hitam di atas footer
+    line_footer = Table([[""]], colWidths=[500])
+    line_footer.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, -1), 2, colors.black)]))
+    elements.append(line_footer)
+    elements.append(Spacer(1, 20))
+
     # Footer tanda tangan
     footer_data = [
         ["Dibuat", "Diketahui"],
-        ["", ""],  # space tanda tangan
+        ["", ""],  # Space untuk tanda tangan
         ["", ""],
-        [f"{staff}", f"{manager}"],
+        [f"<b>{staff}</b>", f"<b>{manager}</b>"],
         [Paragraph("Network Operating Center", style_footer),
          Paragraph("Manager Networking Operating Center", style_footer)]
     ]
