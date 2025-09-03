@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>RFO Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            font-size: 10pt;
+            line-height: 1.5;
+        }
+        .header-logo {
+            width: 3cm;
+            height: 3cm;
+            object-fit: contain;
+            float: left;
+            margin-bottom: 10px;
+        }
+        .header-container {
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        .header-title {
+            text-align: center;
+            margin: 0;
+            padding-top: 15px;
+            color: #333;
+            font-size: 18pt;
+            font-weight: bold;
+        }
+        .label {
+            font-weight: bold;
+            color: #555;
+        }
+        hr {
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-around;
+            gap: 40px;
+        }
+        .signature-block {
+            width: 40%;
+            text-align: center;
+        }
+        .signature-title {
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+        .signature-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .signature-position {
+            font-style: italic;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            vertical-align: top;
+            padding: 4px 0;
+        }
+        .label-cell {
+            width: 25%;
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-container">
+        {% if logo_path %}
+        <img src="{{ logo_path }}" alt="Logo Perusahaan" class="header-logo">
+        {% endif %}
+        <h1 class="header-title">Reason For Outage (RFO)</h1>
+    </div>
+
+    <hr>
+
+    <table>
+        <tr>
+            <td class="label-cell">ID Pelanggan</td>
+            <td>: {{ id_pelanggan }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Nama Pelanggan</td>
+            <td>: {{ nama_pelanggan }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Nama Link</td>
+            <td>: {{ nama_link }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Alamat Link</td>
+            <td>: {{ alamat_link }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Jenis Layanan</td>
+            <td>: {{ jenis_layanan }}</td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <table>
+        <tr>
+            <td class="label-cell">Nomor Tiket</td>
+            <td>: {{ nomor_tiket }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Log Down</td>
+            <td>: {{ log_down }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Log Up</td>
+            <td>: {{ log_up }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Durasi Pending</td>
+            <td>: {{ durasi_pending }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Penyebab Pending</td>
+            <td>: {{ penyebab_pending }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Penyebab</td>
+            <td>: {{ penyebab }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Tindakan</td>
+            <td>: {{ tindakan }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">MTTR</td>
+            <td>: {{ mttr }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">SLA</td>
+            <td>: {{ sla }}%</td>
+        </tr>
+    </table>
+
+    <hr>
+
+    <div class="footer">
+        <div class="signature-block">
+            <div class="signature-title">Dibuat</div>
+            <div class="signature-name">{{ staff }}</div>
+            <div class="signature-position">Network Operating Center</div>
+        </div>
+        <div class="signature-block">
+            <div class="signature-title">Diketahui</div>
+            <div class="signature-name">{{ manager }}</div>
+            <div class="signature-position">Manager Networking Operating Center</div>
+        </div>
+    </div>
+</body>
+</html>
