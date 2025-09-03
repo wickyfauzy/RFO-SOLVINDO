@@ -1,29 +1,24 @@
 import streamlit as st
 from datetime import datetime
-from weasyprint import HTML
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.platypus import Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
 import tempfile
 import os
 import random
-from jinja2 import Template
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_PATH = os.path.join(BASE_DIR, "template", "rfo_template.html")
-LOGO_FOLDER = os.path.join(BASE_DIR, "uploaded_logo")
-os.makedirs(LOGO_FOLDER, exist_ok=True)
 
 st.set_page_config(page_title="RFO Generator", layout="centered")
 st.title("📝 Reason For Outage (RFO) Generator")
 
-# Upload logo perusahaan (opsional)
-logo = st.file_uploader("Upload Logo Perusahaan (Opsional)", type=["png", "jpg", "jpeg"])
-
 # Fungsi buat nomor tiket otomatis
 def generate_ticket():
     now = datetime.now()
-    kode_uniq = random.randint(100000, 99999999)  # 6-8 digit angka unik
+    kode_uniq = random.randint(100000, 99999999)
     return f"TO/DIV/RE/{now.strftime('%Y-%m-%d')}/{kode_uniq}"
 
-# Bagian 1: Data Pelanggan
+# Form input
 st.subheader("Informasi Pelanggan")
 id_pelanggan = st.text_input("ID Pelanggan")
 nama_pelanggan = st.text_input("Nama Pelanggan")
@@ -33,7 +28,6 @@ jenis_layanan = st.text_input("Jenis Layanan")
 
 st.markdown("---")
 
-# Bagian 2: Tiket & Gangguan
 st.subheader("Informasi Tiket & Gangguan")
 nomor_tiket = st.text_input("Nomor Tiket", value=generate_ticket())
 log_down = st.text_input("Log Down (format: YYYY-MM-DD HH:MM)")
@@ -45,11 +39,47 @@ tindakan = st.text_area("Tindakan")
 
 st.markdown("---")
 
-# Footer info
+st.subheader("Logo Perusahaan (Opsional)")
+logo_file = st.file_uploader("Upload Logo (PNG/JPG)", type=["png", "jpg", "jpeg"])
+
+st.markdown("---")
+
 st.subheader("Disusun oleh")
 staff = st.text_input("Nama Staff Pembuat")
 manager = st.text_input("Nama Manager")
 
+# Fungsi buat PDF pakai ReportLab
+def generate_pdf(output_path, data, logo=None):
+    c = canvas.Canvas(output_path, pagesize=A4)
+    width, height = A4
+
+    # Logo jika ada
+    if logo:
+        c.drawImage(logo, 50, height - 80, width=100, preserveAspectRatio=True)
+
+    # Judul
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(200, height - 50, "Reason For Outage (RFO) Report")
+
+    # Garis pemisah
+    c.line(50, height - 90, width - 50, height - 90)
+
+    c.setFont("Helvetica", 12)
+    y = height - 120
+
+    for section, values in data.items():
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(50, y, section)
+        y -= 20
+        c.setFont("Helvetica", 12)
+        for key, value in values.items():
+            c.drawString(70, y, f"{key}: {value}")
+            y -= 18
+        y -= 10
+
+    c.save()
+
+# Tombol Generate PDF
 if st.button("🧾 Generate PDF"):
     try:
         fmt = "%Y-%m-%d %H:%M"
@@ -59,56 +89,49 @@ if st.button("🧾 Generate PDF"):
         jam, sisa = divmod(durasi.seconds, 3600)
         menit = sisa // 60
         mttr = f"{jam} jam {menit} menit"
+
+        # Hitung SLA (30 hari = 30*24*60*60 detik)
         total_bulan = 30 * 24 * 60 * 60
         sla = round((1 - durasi.total_seconds() / total_bulan) * 100, 2)
     except Exception:
         mttr = "Format Salah"
         sla = "Tidak dapat dihitung"
 
-    # Simpan logo permanen jika ada upload baru
-    logo_path_saved = None
-    if logo:
-        ext = os.path.splitext(logo.name)[1].lower()
-        if ext not in ['.png', '.jpg', '.jpeg']:
-            st.error("Format logo harus PNG, JPG, atau JPEG")
-            st.stop()
-        logo_path_saved = os.path.join(LOGO_FOLDER, f"logo{ext}")
-        with open(logo_path_saved, "wb") as f:
-            f.write(logo.read())
-    else:
-        # Jika tidak upload, cek logo lama
-        existing_logos = [f for f in os.listdir(LOGO_FOLDER) if f.startswith("logo.")]
-        if existing_logos:
-            logo_path_saved = os.path.join(LOGO_FOLDER, existing_logos[0])
+    # Data untuk PDF
+    data = {
+        "Informasi Pelanggan": {
+            "ID Pelanggan": id_pelanggan,
+            "Nama Pelanggan": nama_pelanggan,
+            "Nama Link": nama_link,
+            "Alamat Link": alamat_link,
+            "Jenis Layanan": jenis_layanan
+        },
+        "Informasi Gangguan": {
+            "Nomor Tiket": nomor_tiket,
+            "Log Down": log_down,
+            "Log Up": log_up,
+            "Durasi Pending": durasi_pending,
+            "Penyebab Pending": penyebab_pending,
+            "Penyebab": penyebab,
+            "Tindakan": tindakan,
+            "MTTR": mttr,
+            "SLA": f"{sla}%"
+        },
+        "Disusun oleh": {
+            "Staff": staff,
+            "Manager": manager
+        }
+    }
 
-    # Load template HTML
-    with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
-        html_template = Template(f.read())
+    # Simpan logo sementara jika ada
+    logo_path = None
+    if logo_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(logo_file.name)[1]) as tmp_logo:
+            tmp_logo.write(logo_file.read())
+            logo_path = tmp_logo.name
 
-    logo_filename = os.path.basename(logo_path_saved) if logo_path_saved else None
-    base_url_dir = LOGO_FOLDER if logo_path_saved else None
-
-    html_rendered = html_template.render(
-        id_pelanggan=id_pelanggan,
-        nama_pelanggan=nama_pelanggan,
-        nama_link=nama_link,
-        alamat_link=alamat_link,
-        jenis_layanan=jenis_layanan,
-        nomor_tiket=nomor_tiket,
-        log_down=log_down,
-        log_up=log_up,
-        durasi_pending=durasi_pending,
-        penyebab_pending=penyebab_pending,
-        penyebab=penyebab,
-        tindakan=tindakan,
-        staff=staff,
-        manager=manager,
-        mttr=mttr,
-        sla=sla,
-        logo_path=logo_filename
-    )
-
+    # Generate PDF
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f_pdf:
-        HTML(string=html_rendered, base_url=base_url_dir).write_pdf(f_pdf.name)
+        generate_pdf(f_pdf.name, data, logo=logo_path)
         with open(f_pdf.name, "rb") as file:
             st.download_button("📄 Download PDF", file, file_name="RFO_Report.pdf")
