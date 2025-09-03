@@ -59,7 +59,7 @@ def generate_pdf(output_path, data, logo=None):
 
     # Header
     if logo:
-        img = Image(logo, width=90, height=50)
+        img = Image(logo, width=80, height=40)  # Proporsional
         img.hAlign = "LEFT"
         elements.append(img)
 
@@ -98,12 +98,12 @@ def generate_pdf(output_path, data, logo=None):
     elements.append(line_footer)
     elements.append(Spacer(1, 20))
 
-    # Footer tanda tangan
+    # Footer tanda tangan (tanpa bold di nama)
     footer_data = [
         ["Dibuat", "Diketahui"],
         ["", ""],  # Space untuk tanda tangan
         ["", ""],
-        [f"<b>{staff}</b>", f"<b>{manager}</b>"],
+        [staff, manager],  # Nama normal
         [Paragraph("Network Operating Center", style_footer),
          Paragraph("Manager Networking Operating Center", style_footer)]
     ]
