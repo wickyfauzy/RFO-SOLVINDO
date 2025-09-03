@@ -29,7 +29,7 @@ jenis_layanan = st.text_input("Jenis Layanan")
 st.markdown("---")
 
 st.subheader("Informasi Tiket & Gangguan")
-nomor_tiket = st.text_input("Nomor Tiket", value=generate_ticket())
+nomor_tiket = st.text_input("Nomor Tiket (otomatis jika kosong)", placeholder="Biarkan kosong untuk generate otomatis")
 log_down = st.text_input("Log Down (format: YYYY-MM-DD HH:MM)")
 log_up = st.text_input("Log Up (format: YYYY-MM-DD HH:MM)")
 durasi_pending = st.text_input("Durasi Pending")
@@ -57,9 +57,11 @@ def generate_pdf(output_path, data, logo=None):
     style_center = ParagraphStyle(name="Center", alignment=TA_CENTER, fontSize=18, spaceAfter=10, leading=22)
     style_footer = ParagraphStyle(name="Footer", fontSize=10, alignment=TA_CENTER, italic=True)
 
-    # Header
+    # Header dengan logo proporsional
     if logo:
-        img = Image(logo, width=80, height=40)  # Proporsional
+        img = Image(logo)
+        img.drawWidth = 180  # Set lebar tetap 180 px
+        img.drawHeight = img.imageHeight * (img.drawWidth / img.imageWidth)  # Tinggi proporsional
         img.hAlign = "LEFT"
         elements.append(img)
 
@@ -75,7 +77,6 @@ def generate_pdf(output_path, data, logo=None):
     # Tabel data
     table_data = []
     for section, values in data.items():
-        # Judul Section
         table_data.append([Paragraph(f"<b>{section}</b>", styles["Normal"]), ""])
         for key, value in values.items():
             table_data.append([Paragraph(f"<b>{key}</b>", styles["Normal"]), f": {value}"])
@@ -98,12 +99,12 @@ def generate_pdf(output_path, data, logo=None):
     elements.append(line_footer)
     elements.append(Spacer(1, 20))
 
-    # Footer tanda tangan (tanpa bold di nama)
+    # Footer tanda tangan
     footer_data = [
         ["Dibuat", "Diketahui"],
-        ["", ""],  # Space untuk tanda tangan
         ["", ""],
-        [staff, manager],  # Nama normal
+        ["", ""],
+        [staff, manager],
         [Paragraph("Network Operating Center", style_footer),
          Paragraph("Manager Networking Operating Center", style_footer)]
     ]
@@ -120,6 +121,8 @@ def generate_pdf(output_path, data, logo=None):
 
 # Tombol Generate PDF
 if st.button("🧾 Generate PDF"):
+    ticket_number = nomor_tiket.strip() if nomor_tiket.strip() else generate_ticket()
+
     try:
         fmt = "%Y-%m-%d %H:%M"
         start = datetime.strptime(log_down, fmt)
@@ -129,14 +132,12 @@ if st.button("🧾 Generate PDF"):
         menit = sisa // 60
         mttr = f"{jam} jam {menit} menit"
 
-        # Hitung SLA (30 hari)
         total_bulan = 30 * 24 * 60 * 60
         sla = round((1 - durasi.total_seconds() / total_bulan) * 100, 2)
     except Exception:
         mttr = "Format Salah"
         sla = "Tidak dapat dihitung"
 
-    # Data untuk PDF
     data = {
         "Informasi Pelanggan": {
             "ID Pelanggan": id_pelanggan,
@@ -146,7 +147,7 @@ if st.button("🧾 Generate PDF"):
             "Jenis Layanan": jenis_layanan
         },
         "Informasi Gangguan": {
-            "Nomor Tiket": nomor_tiket,
+            "Nomor Tiket": ticket_number,
             "Log Down": log_down,
             "Log Up": log_up,
             "Durasi Pending": durasi_pending,
@@ -169,7 +170,6 @@ if st.button("🧾 Generate PDF"):
         if os.path.exists(default_logo):
             logo_path = default_logo
 
-    # Generate PDF
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f_pdf:
         generate_pdf(f_pdf.name, data, logo=logo_path)
         with open(f_pdf.name, "rb") as file:
