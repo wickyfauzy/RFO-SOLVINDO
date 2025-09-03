@@ -1,10 +1,10 @@
 import streamlit as st
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import cm
-from reportlab.platypus import Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib import colors
 import tempfile
 import os
 import random
@@ -48,36 +48,65 @@ st.subheader("Disusun oleh")
 staff = st.text_input("Nama Staff Pembuat")
 manager = st.text_input("Nama Manager")
 
-# Fungsi buat PDF pakai ReportLab
+# Fungsi buat PDF mirip template
 def generate_pdf(output_path, data, logo=None):
-    c = canvas.Canvas(output_path, pagesize=A4)
-    width, height = A4
+    doc = SimpleDocTemplate(output_path, pagesize=A4)
+    elements = []
 
-    # Logo jika ada
+    styles = getSampleStyleSheet()
+    style_center = ParagraphStyle(name="Center", parent=styles["Heading1"], alignment=TA_CENTER)
+    style_table = styles["Normal"]
+    style_footer = ParagraphStyle(name="Footer", fontSize=10, alignment=TA_CENTER, italic=True)
+
+    # Header dengan logo dan judul
     if logo:
-        c.drawImage(logo, 50, height - 80, width=100, preserveAspectRatio=True)
+        img = Image(logo, width=80, height=50)
+        img.hAlign = "LEFT"
+        elements.append(img)
 
-    # Judul
-    c.setFont("Helvetica-Bold", 18)
-    c.drawString(200, height - 50, "Reason For Outage (RFO) Report")
+    elements.append(Paragraph("Reason For Outage (RFO)", style_center))
+    elements.append(Spacer(1, 12))
 
     # Garis pemisah
-    c.line(50, height - 90, width - 50, height - 90)
+    elements.append(Spacer(1, 5))
 
-    c.setFont("Helvetica", 12)
-    y = height - 120
-
+    # Buat tabel data
+    table_data = []
     for section, values in data.items():
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(50, y, section)
-        y -= 20
-        c.setFont("Helvetica", 12)
+        # Section Title
+        table_data.append([Paragraph(f"<b>{section}</b>", styles["Normal"]), ""])
         for key, value in values.items():
-            c.drawString(70, y, f"{key}: {value}")
-            y -= 18
-        y -= 10
+            table_data.append([key, f": {value}"])
+        table_data.append(["", ""])
 
-    c.save()
+    table = Table(table_data, colWidths=[150, 350])
+    table.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+
+    elements.append(table)
+    elements.append(Spacer(1, 20))
+
+    # Footer tanda tangan
+    footer_data = [
+        ["Dibuat", "Diketahui"],
+        [staff, manager],
+        [Paragraph("Network Operating Center", style_footer),
+         Paragraph("Manager Networking Operating Center", style_footer)]
+    ]
+
+    footer_table = Table(footer_data, colWidths=[250, 250])
+    footer_table.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 12),
+    ]))
+
+    elements.append(footer_table)
+    doc.build(elements)
 
 # Tombol Generate PDF
 if st.button("🧾 Generate PDF"):
@@ -90,7 +119,7 @@ if st.button("🧾 Generate PDF"):
         menit = sisa // 60
         mttr = f"{jam} jam {menit} menit"
 
-        # Hitung SLA (30 hari = 30*24*60*60 detik)
+        # Hitung SLA (30 hari)
         total_bulan = 30 * 24 * 60 * 60
         sla = round((1 - durasi.total_seconds() / total_bulan) * 100, 2)
     except Exception:
@@ -116,10 +145,6 @@ if st.button("🧾 Generate PDF"):
             "Tindakan": tindakan,
             "MTTR": mttr,
             "SLA": f"{sla}%"
-        },
-        "Disusun oleh": {
-            "Staff": staff,
-            "Manager": manager
         }
     }
 
