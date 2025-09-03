@@ -54,21 +54,20 @@ def generate_pdf(output_path, data, logo=None):
     elements = []
 
     styles = getSampleStyleSheet()
-    style_center = ParagraphStyle(name="Center", parent=styles["Heading1"], alignment=TA_CENTER)
-    style_table = styles["Normal"]
+    style_center = ParagraphStyle(name="Center", parent=styles["Heading1"], alignment=TA_CENTER, fontSize=18, spaceAfter=10)
     style_footer = ParagraphStyle(name="Footer", fontSize=10, alignment=TA_CENTER, italic=True)
 
-    # Header dengan logo dan judul
+    # Header
     if logo:
-        img = Image(logo, width=80, height=50)
+        img = Image(logo, width=90, height=50)
         img.hAlign = "LEFT"
         elements.append(img)
 
     elements.append(Paragraph("Reason For Outage (RFO)", style_center))
-    elements.append(Spacer(1, 12))
+    elements.append(Spacer(1, 6))
 
-    # Garis pemisah
-    elements.append(Spacer(1, 5))
+    # Garis hitam tebal
+    elements.append(Spacer(1, 6))
 
     # Buat tabel data
     table_data = []
@@ -76,24 +75,26 @@ def generate_pdf(output_path, data, logo=None):
         # Section Title
         table_data.append([Paragraph(f"<b>{section}</b>", styles["Normal"]), ""])
         for key, value in values.items():
-            table_data.append([key, f": {value}"])
+            table_data.append([Paragraph(f"<b>{key}</b>", styles["Normal"]), f": {value}"])
         table_data.append(["", ""])
 
     table = Table(table_data, colWidths=[150, 350])
     table.setStyle(TableStyle([
         ("ALIGN", (0, 0), (-1, -1), "LEFT"),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("FONTSIZE", (0, 0), (-1, -1), 11),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
     elements.append(table)
-    elements.append(Spacer(1, 20))
+    elements.append(Spacer(1, 30))
 
     # Footer tanda tangan
     footer_data = [
         ["Dibuat", "Diketahui"],
-        [staff, manager],
+        ["", ""],  # space tanda tangan
+        ["", ""],
+        [f"{staff}", f"{manager}"],
         [Paragraph("Network Operating Center", style_footer),
          Paragraph("Manager Networking Operating Center", style_footer)]
     ]
@@ -148,12 +149,16 @@ if st.button("🧾 Generate PDF"):
         }
     }
 
-    # Simpan logo sementara jika ada
+    # Logo: pakai upload atau default
     logo_path = None
     if logo_file:
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(logo_file.name)[1]) as tmp_logo:
             tmp_logo.write(logo_file.read())
             logo_path = tmp_logo.name
+    else:
+        default_logo = os.path.join(os.path.dirname(__file__), "logo.png")
+        if os.path.exists(default_logo):
+            logo_path = default_logo
 
     # Generate PDF
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f_pdf:
